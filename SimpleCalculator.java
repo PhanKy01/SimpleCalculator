@@ -1,29 +1,89 @@
 import java.util.*;
 import java.lang.Math;
 
+
+/*** @author Ky Phan @cwu, SID: 41882471
+ *   @description This program compares function as a simple calculator.
+ */
 public class SimpleCalculator
 {
     // Mapping the supported non-unary operators to their precedence.
-    static final Map<String, Integer> OPERATORS = new HashMap<>();
- 
+    static final Map<String, Integer> OPERATORS_PREC = new HashMap<>();
+    // Mapping the supported non-unary operators to their number of arguments.
+    static final Map<String, Integer> OPERATORS_ARGS = new HashMap<>();
+    
+    /** 
+     * This method initializes the 'OPERATORS_PREC' Map which maps the supported operators (as string) with
+     * their respective precedence level (as int). Also initializes the 'OPERATORS_ARGS' Map which maps the
+     * supported operators (as string) with their respective number of arguments (as int)
+     */
+    static void init()
+    {
+        // Initializes 'OPERATORS_PREC' Map.
+        OPERATORS_PREC.put("(", 0);
+        
+        OPERATORS_PREC.put("+", 1);
+        OPERATORS_PREC.put("-", 1);
+        OPERATORS_PREC.put("*", 2);
+        OPERATORS_PREC.put("/", 2);
+        OPERATORS_PREC.put("^", 3);
+        
+        OPERATORS_PREC.put("sin", 4);
+        OPERATORS_PREC.put("cos", 4);
+        OPERATORS_PREC.put("tan", 4);
+        OPERATORS_PREC.put("cot", 4);
+        
+        OPERATORS_PREC.put("ln", 4);
+        OPERATORS_PREC.put("log", 4);
+        
+        OPERATORS_PREC.put("~", 5);
+        
+        // Initializes 'OPERATORS_ARGS' Map.
+        OPERATORS_ARGS.put("+", 2);
+        OPERATORS_ARGS.put("-", 2);
+        OPERATORS_ARGS.put("*", 2);
+        OPERATORS_ARGS.put("/", 2);
+        OPERATORS_ARGS.put("^", 2);
+        
+        OPERATORS_ARGS.put("sin", 1);
+        OPERATORS_ARGS.put("cos", 1);
+        OPERATORS_ARGS.put("tan", 1);
+        OPERATORS_ARGS.put("cot", 1);
+        
+        OPERATORS_ARGS.put("ln", 1);
+        OPERATORS_ARGS.put("log", 1);
+        
+        OPERATORS_ARGS.put("~", 1);
+    }
+    
     
     public static void main(String[] args)
     {
+        // Initialize the 'OPERATORS_PREC' Map and the 'OPERATORS_ARGS' Map.
         init();
+        
         
         // Get the mathematical expression without white spaces.
         String expression = getExpression().replaceAll("\\s","");
-        System.out.println(expression);
+        // Remove the '=' at the end if it's there.
+        if (expression != null && expression.length() > 0 && expression.charAt(expression.length()-1) == '=')
+            expression = expression.substring(0, expression.length()-1);
         
-        // Try to convert the 'expression' to RPN. Catch any error.
-//         try
-//         {
-            System.out.println("rpn: "+infixToRPN(expression).toString()+"end");// 
-//         }
-//         catch (Exception e) {System.out.println("err end.");}
+        // Check if 'expression' is empty.
+        if (expression != null)
+        {
+            // Try to evaluate the 'expression'. Catch any Exception.
+            try
+            {
+                Queue<String> rpn = new LinkedList<>();
+                rpn = infixToRPN(expression);
+                double result = evaluateRPN(rpn);
+                System.out.println("result: " + String.format("%.4f", result));
+            }
+            catch (Exception e) {}
+        }
         
-        System.out.println("end.");
-//         System.out.println("end."+Double.parseDouble("(0.23)d"));
+        System.out.println("Program end.");
     }
     
     /** 
@@ -45,34 +105,6 @@ public class SimpleCalculator
         return console.nextLine();
     }
     
-    /** 
-     * This method performs math operations.
-     * @param operator The mathematical operator in string form.
-     * @param arg1 A real number.
-     * @param arg2 A real number.
-     * @return The result after performing the math operation, or -123 if there's error.
-     */
-    static double doOperation(String operator, double arg1, double arg2)
-    {
-        if (operator.equals("+")) return (arg1 + arg2);
-        if (operator.equals("-")) return (arg1 - arg2);
-        if (operator.equals("*")) return (arg1 * arg2);
-        if (operator.equals("/")) return (arg1 / arg2);
-        if (operator.equals("^")) return Math.pow(arg1, arg2);
-        
-        if (operator.equals("sin")) return Math.sin(arg1);
-        if (operator.equals("cos")) return Math.cos(arg1);
-        if (operator.equals("tan")) return Math.tan(arg1);
-        if (operator.equals("cot")) return 1.0 / Math.tan(arg1);
-        
-        if (operator.equals("ln")) return Math.log(arg1);
-        if (operator.equals("log")) return Math.log10(arg1);
-        
-        if (operator.equals("~")) return (arg1 * (-1));
-        
-        System.err.println("Operator \"" + operator + "\" not implemented");
-        return -123;
-    }
     
     /** 
      * This method convert an infix math expression to Reverse Polish Notation (RPN), aka Postfix Notation.
@@ -80,19 +112,19 @@ public class SimpleCalculator
      * @return A stack of string tokens that is the RPN of the provided infix math expression (operator tokens 
      * have a "$" at the start).
      */
-    public static Stack<String> infixToRPN(String exp) 
+    public static Queue<String> infixToRPN(String exp) 
     {
-        // Stack of string 'rpn' holds the RPN representation.
-        Stack<String> rpn = new Stack<>();
+        // Queue of string 'rpn' holds the RPN representation.
+        Queue<String> rpn = new LinkedList<>();
         // String 'operandStr' holds the operand (number) in string form.
         String operandStr = "";
         // String 'operator' holds the operator string (> than 1 character).
         String operatorStr  = "";
-        
         // Make 'opStack' stack for the operators.
         Stack<String> opStack = new Stack<String>();
         
         
+        // Processing each character of 'exp'.
         int i = 0;
         while (i < exp.length())
         {
@@ -111,16 +143,15 @@ public class SimpleCalculator
                 // Try to convert 'operandStr' a real number later. Warn user, end program if error occurs.
                 try
                 {
-                    Double number = Double.parseDouble(operandStr);
-                    System.out.println("number: "+number);
+                    double number = Double.parseDouble(operandStr);
                     // Putting the operand to the 'rpn'.
-                    rpn.push(operandStr);
+                    rpn.add(operandStr);
                     // Reset for the next operand.
                     operandStr = "";
                 }
                 catch (NumberFormatException e)
                 {
-                    System.out.println("Error when parsing number.");
+                    System.out.println("Error in 'infixToRPN' method. Error when parsing number.");
                     return null;
                 }
             }
@@ -133,11 +164,9 @@ public class SimpleCalculator
             // 'operatorStr'.
             else if (operatorStr.length() > 0)
             {
-                System.out.println("operatorStr: " + operatorStr);
                 // Putting the 'operatorStr' to the 'opStack' always (only because the supported 'operatorStr'
                 // are all unary operators).
                 opStack.push(operatorStr);
-                System.out.println(opStack.toString());
                 // Reset for the next operator expression.
                 operatorStr = "";
             }
@@ -152,14 +181,13 @@ public class SimpleCalculator
                 {
                     try
                     {
-                        Double number = Double.parseDouble(operandStr);
-                        System.out.println("number: "+number);
+                        double number = Double.parseDouble(operandStr);
                         // Putting the operand to the 'rpn'.
-                        rpn.push(operandStr);
+                        rpn.add(operandStr);
                     }
                     catch (NumberFormatException e)
                     {
-                        System.out.println("Error parsing number.");
+                        System.out.println("Error in 'infixToRPN' method. Error parsing number.");
                         return null;
                     }
                 }
@@ -167,50 +195,47 @@ public class SimpleCalculator
                 // end with a string operator.
                 if (Character.isLetter(c))
                 {
-                    System.out.println("Error parsing expression.");
+                    System.out.println("Error in 'infixToRPN' method. Bad expression placement at the end.");
                     return null;
                 }
             }
-
+            
+            
+            // Getting single character operator (+ - * / ^ ...).
             if (!(Character.isDigit(c) || c == '.' || Character.isLetter(c)))
             {
                 // If scanned '(', push to the 'opStack' (as string) always.
                 if (c == '(')
                 {
                     opStack.push("(");
-                    System.out.println(opStack.toString());
                 }
                 // If scanned ')' ... 
                 else if (c == ')') 
                 {
                     // ...keep popping from the 'opStack' until a "(" is met, forming the () pair.
                     while (!opStack.isEmpty() && !opStack.peek().equals("("))
-                    {
-                        rpn.push("$" + opStack.pop());
-                    }
+                        rpn.add("$" + opStack.pop());
                     // If no "(" is met, expression is unbalanced.
                     if (!opStack.isEmpty() && !opStack.peek().equals("("))
                     {
-                        System.out.println("Unbalanced expression. Check your parenthesis.");
+                        System.out.println("Error in 'infixToRPN' method. Unbalanced expression. Check your parenthesis.");
                         return null;
                     }
                     else
                         opStack.pop();
-                    
-                    System.out.println(opStack.toString());
                 }
                 // If scanned an operator.
                 else
                 {
-                    // The '~' will be used internally to denote the unary negation operator. So any entered '~'
-                    // character is invalid.
+                    // The '~' will be used internally to denote the unary negation operator. So any entered 
+                    // '~' character is invalid.
                     if (c == '~')
                     {
-                        System.out.println("Error parsing expression.");
+                        System.out.println("Error in 'infixToRPN' method. Operator \"~\" not implemented");
                         return null;
                     }
-                    // If the scanned operator is a unary negation (the '-' is the first thing in the expression,
-                    // or it comes after another operator (not after a number, not after a finished expression)).
+                    // If the scanned operator is a unary negation ('-' is the first thing in the expression,
+                    // or it is after another operator (not after a number, not after a finished expression)).
                     else if ((c == '-') && ((i == 0) || (!Character.isDigit(exp.charAt(i-1)) && (exp.charAt(i-1) != '.') && (exp.charAt(i-1) != ')'))))
                     {
                         // Using '~' for the unary negation sign.
@@ -219,27 +244,35 @@ public class SimpleCalculator
                     // For all other operators.
                     else
                     {
-                        System.out.println("opStack before while: "+opStack.toString());
-                        System.out.println("c before while: "+c);
-                        // If 'opStack' not empty, keep popping operators with <= precedence from 'opStack'
-                        // to 'rpn'. Remember to keep 'c' in string form.
-                        while (!opStack.isEmpty() && (OPERATORS.get("" + c) <= OPERATORS.get(opStack.peek())))
+                        // Try to catch when the operator is not available in 'OPERATORS_PREC' Map.
+                        try
                         {
-                            // Any "(" remaining in 'opStack' indicates an unbalance expression.
-                            if (opStack.peek().equals("("))
+                            // If 'opStack' not empty, keep popping operators with <= precedence from 'opStack'
+                            // to 'rpn'. Remember to keep 'c' in string form.
+                            while (!opStack.isEmpty() && (OPERATORS_PREC.get("" + c) <= OPERATORS_PREC.get(opStack.peek())))
                             {
-                                System.out.println("Unbalanced expression. Check your parenthesis.");
-                                return null;
+                                // Any "(" remaining in 'opStack' indicates an unbalance expression.
+                                if (opStack.peek().equals("("))
+                                {
+                                    System.out.println("Error in 'infixToRPN' method. Unbalanced expression. Check your parenthesis.");
+                                    return null;
+                                }
+                                rpn.add("$" + opStack.pop());
                             }
-                            rpn.push("$" + opStack.pop());
+                            // Then push the scanned operator (as string) to 'opStack'.
+                            opStack.push("" + c);
                         }
-                        // Then push the scanned operator (as string) to 'opStack'.
-                        opStack.push("" + c);
+                        // If operator is not available in 'OPERATORS_PREC' Map, display error, end method.
+                        catch (NullPointerException e)
+                        {
+                                System.out.println("Error in 'infixToRPN' method. Unsupported operator detected.");
+                                return null;
+                        }
                     }
                 }
             }
             
-            System.out.println("i: "+i);
+            // Move to next character position.
             i++;
         }
         
@@ -249,35 +282,125 @@ public class SimpleCalculator
             // Any "(" remaining in 'opStack' indicates an unbalance expression.
             if (opStack.peek().equals("("))
             {
-                System.out.println("Unbalanced expression. Check your parenthesis.");
+                System.out.println("Error in 'infixToRPN' method. Unbalanced expression. Check your parenthesis.");
                 return null;
             } 
-            rpn.push("$" + opStack.pop());
+            rpn.add("$" + opStack.pop());
         }
         
         return rpn;
     }
     
     
+    /** 
+     * This method take in a Queue<String> representation of an RPN expression, where each String is an operand or an 
+     * operator (operator has '$' attached to front of String). Then it calculate the RPN expression to get the result.
+     * @param rpn The Queue<String> representation of an RPN expression where each String is an operand or an operator 
+     * (operator has '$' attached to front of String).
+     * @return The result of the RPN expression.
+     */
+    static double evaluateRPN(Queue<String> rpn)
+    {        
+        Stack<Double> values = new Stack<>();
+        double val1 = 0; 
+        double val2 = 0;
+        
+        // While the 'rpn' expression queue not empty.
+        while (!rpn.isEmpty())
+        {
+            // Collect all tokens.
+            String token = rpn.remove();            
+            
+            // If encountered number, put it to 'values' stack. Operators have '$' at the start.
+            if (token.charAt(0) != '$')
+                values.push(Double.parseDouble(token));
+            // If encountered operator.
+            else
+            {
+                // Remove the '$' at the front.
+                String operator = token.substring(1);
+                // Check if the operator is supported.
+                if (OPERATORS_ARGS.containsKey(operator))
+                {
+                    // Unary operations.
+                    if (OPERATORS_ARGS.get(operator) == 1)
+                        val1 = values.pop();
+                    // Binary operations.
+                    else if (OPERATORS_ARGS.get(operator) == 2)
+                    {
+                        val2 = values.pop();
+                        val1 = values.pop();
+                    }
+                    
+                    values.push(doOperation(operator, val1, val2));
+                }
+                // If the operator is NOT supported, end method, display error code.
+                else
+                {
+                    System.out.println("Error in 'evaluateRPN' method. Unsupported operator detected.");
+                    return 0;
+                }
+            }
+        }
+        
+        return values.peek();
+    }
     
-    static void init()
+    
+    /** 
+     * This method performs math operations.
+     * @param operator The mathematical operator in string form.
+     * @param arg1 A real number.
+     * @param arg2 A real number.
+     * @return The result after performing the math operation, or an error code.
+     */
+    static double doOperation(String operator, double arg1, double arg2)
     {
-        OPERATORS.put("(", 0);
+        if (operator.equals("+")) return (arg1 + arg2);
+        if (operator.equals("-")) return (arg1 - arg2);
+        if (operator.equals("*")) return (arg1 * arg2);
+        if (operator.equals("/"))
+        {
+            if (arg2 != 0)
+                return (arg1 / arg2);
+            else
+            {
+                System.out.println("Error in 'doOperation' method. Division by 0.");
+                return 0;
+            }
+        }
+        if (operator.equals("^")) return Math.pow(arg1, arg2);
         
-        OPERATORS.put("+", 1);
-        OPERATORS.put("-", 1);
-        OPERATORS.put("*", 2);
-        OPERATORS.put("/", 2);
-        OPERATORS.put("^", 3);
+        if (operator.equals("sin")) return Math.sin(arg1);
+        if (operator.equals("cos")) return Math.cos(arg1);
+        if (operator.equals("tan")) return Math.tan(arg1);
+        if (operator.equals("cot")) return 1.0 / Math.tan(arg1);
         
-        OPERATORS.put("sin", 4);
-        OPERATORS.put("cos", 4);
-        OPERATORS.put("tan", 4);
-        OPERATORS.put("cot", 4);
+        if (operator.equals("ln"))
+        {
+            if (arg1 > 0)
+                return Math.log(arg1);
+            else
+            {
+                System.out.println("Error in 'doOperation' method. The 'ln' function has negative operand.");
+                return 0;
+            }
+        }
         
-        OPERATORS.put("ln", 4);
-        OPERATORS.put("log", 4);
+        if (operator.equals("log"))
+        {
+            if (arg1 > 0)
+                return Math.log10(arg1);
+            else
+            {
+                System.out.println("Error in 'doOperation' method. The 'log' function has negative operand.");
+                return 0;
+            }
+        }
         
-        OPERATORS.put("~", 5);
+        if (operator.equals("~")) return (arg1 * (-1));
+        
+        System.out.println("Error in 'doOperation' method. Unsupported operator detected.");
+        return 0;
     }
 }
